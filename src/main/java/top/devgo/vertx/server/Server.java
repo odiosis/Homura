@@ -10,6 +10,8 @@ import io.vertx.core.net.NetSocket;
 import io.vertx.core.parsetools.RecordParser;
 import io.vertx.core.shareddata.SharedData;
 import io.vertx.core.streams.Pump;
+import top.devgo.vertx.message.Command;
+import top.devgo.vertx.message.Message;
 import top.devgo.vertx.message.MessageHelper;
 
 import java.util.Set;
@@ -37,12 +39,17 @@ public class Server extends AbstractVerticle {
             clients.add(clientSocket);
 
             Pump.pump(clientSocket, clientSocket).start();//reactive
-            clientSocket.handler(buffer -> {
-                RecordParser.newFixed(MessageHelper.FIXED_LENGTH).handler(fixedBuf -> {
-                    //TODO decompose message and do logic
-
-                });
-            });
+            //decompose message and do logic
+            clientSocket.handler(buf -> RecordParser.newFixed(buf.getInt(0)).handler(fixedBuf -> {
+                Message message = MessageHelper.decompose(fixedBuf);
+                switch (message.getCommand()) {
+                    case client_heartbeat:
+                        clientSocket.write(MessageHelper.compose(Command.client_heartbeat_resp, null));
+                        break;
+                    default:
+                        break;
+                }
+            }).handle(buf));
 
             //client out
             clientSocket.closeHandler(Void -> {
