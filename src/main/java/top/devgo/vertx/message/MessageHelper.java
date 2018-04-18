@@ -14,17 +14,25 @@ public class MessageHelper {
                 .appendShort(version) //协议版本
                 .appendInt(command.getCode()) //command
                 .appendInt(1); //seq 客户端去重用到
-        Buffer body = Buffer.buffer(Json.encode(content));
-        Buffer result = Buffer.buffer().appendInt(FIXED_LENGTH + header.length() + body.length()) //包长度
-                .appendBuffer(header) //包头
-                .appendBuffer(body); //包体
-        return result;
+        if (content != null){
+            Buffer body = Buffer.buffer(Json.encode(content));
+            return Buffer.buffer().appendInt(FIXED_LENGTH + header.length() + body.length()) //包长度
+                    .appendBuffer(header) //包头
+                    .appendBuffer(body); //包体
+        }else {
+            return Buffer.buffer().appendInt(FIXED_LENGTH + header.length()) //包长度
+                    .appendBuffer(header); //包头
+        }
     }
 
     public static Message decompose(Buffer buffer){
         int packageLength = buffer.getInt(0);
         int command = buffer.getInt(FIXED_LENGTH+2+2);
-        Object body = Json.decodeValue(buffer.getBuffer(headerLength, packageLength), Object.class);
-        return new Message(Command.of(command), body);
+        if (command > Command.client_heartbeat_resp.getCode()){
+            Object body = Json.decodeValue(buffer.getBuffer(headerLength, packageLength), Object.class);
+            return new Message(Command.of(command), body);
+        }else {
+            return new Message(Command.of(command), null);
+        }
     }
 }
