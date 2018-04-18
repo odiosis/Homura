@@ -1,4 +1,4 @@
-package top.devgo.vertx.client;
+package top.devgo.vertx.test;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.net.NetClientOptions;

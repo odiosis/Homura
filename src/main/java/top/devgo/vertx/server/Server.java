@@ -7,8 +7,10 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetSocket;
+import io.vertx.core.parsetools.RecordParser;
 import io.vertx.core.shareddata.SharedData;
 import io.vertx.core.streams.Pump;
+import top.devgo.vertx.message.MessageHelper;
 
 import java.util.Set;
 
@@ -36,7 +38,10 @@ public class Server extends AbstractVerticle {
 
             Pump.pump(clientSocket, clientSocket).start();//reactive
             clientSocket.handler(buffer -> {
-                //TODO decompose message and do logic
+                RecordParser.newFixed(MessageHelper.FIXED_LENGTH).handler(fixedBuf -> {
+                    //TODO decompose message and do logic
+
+                });
             });
 
             //client out
