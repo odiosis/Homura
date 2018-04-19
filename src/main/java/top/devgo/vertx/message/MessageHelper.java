@@ -4,6 +4,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 
 public class MessageHelper {
+    public static final String delimiter = "--==HOMURA-PKG-END==--";//length 22
     private static final short headerLength = 16;
     private static final short version = 1;
 
@@ -17,14 +18,17 @@ public class MessageHelper {
                 .appendShort(version) //协议版本
                 .appendInt(command.getCode()) //command
                 .appendInt(seq); //seq 客户端去重用到
+        Buffer delimit = Buffer.buffer(delimiter);
         if (content != null){
             Buffer body = Buffer.buffer(Json.encode(content));
-            return Buffer.buffer().appendInt(4 + header.length() + body.length()) //包长度
+            return Buffer.buffer().appendInt(4 + header.length() + body.length() + delimit.length()) //包长度
                     .appendBuffer(header) //包头
-                    .appendBuffer(body); //包体
+                    .appendBuffer(body) //包体
+                    .appendBuffer(delimit);
         }else {
-            return Buffer.buffer().appendInt(4 + header.length()) //包长度
-                    .appendBuffer(header); //包头
+            return Buffer.buffer().appendInt(4 + header.length() + delimit.length()) //包长度
+                    .appendBuffer(header) //包头
+                    .appendBuffer(delimit);
         }
     }
 
@@ -32,7 +36,7 @@ public class MessageHelper {
         int packageLength = buffer.getInt(0);
         int command = buffer.getInt(4+2+2);
         if (command > Command.heartbeat_resp.getCode()){
-            Object body = Json.decodeValue(buffer.getBuffer(headerLength, packageLength), Object.class);
+            Object body = Json.decodeValue(buffer.getBuffer(headerLength, packageLength - delimiter.length()), Object.class);
             return new Message(Command.of(command), body);
         }else {
             return new Message(Command.of(command), null);

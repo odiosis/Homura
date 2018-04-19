@@ -14,6 +14,7 @@ import top.devgo.vertx.message.Command;
 import top.devgo.vertx.message.Message;
 import top.devgo.vertx.message.MessageHelper;
 
+import java.util.Map;
 import java.util.Set;
 
 public class Server extends AbstractVerticle {
@@ -39,17 +40,63 @@ public class Server extends AbstractVerticle {
             clients.add(clientSocket);
 
             Pump.pump(clientSocket, clientSocket).start();//reactive
+            RecordParser recordParser = RecordParser.newDelimited(MessageHelper.delimiter, clientSocket);
+
             //decompose message and do logic
-            clientSocket.handler(buf -> RecordParser.newFixed(buf.getInt(0)).handler(fixedBuf -> {
+            clientSocket.handler(recordParser.handler(fixedBuf -> {
                 Message message = MessageHelper.decompose(fixedBuf);
                 switch (message.getCommand()) {
-                    case client_heartbeat:
-                        clientSocket.write(MessageHelper.compose(Command.client_heartbeat_resp, null));
+                    case heartbeat:
+                        clientSocket.write(MessageHelper.compose(Command.heartbeat_resp, null));
                         break;
-                    default:
+                    case auth:
+                        //TODO auth
+                        break;
+                    case upstream:
+                        Map<String, Object> m = (Map<String, Object>) message.getBody();
+                        //type: join_group/leave_group/talk/group_talk
+                        switch ((String) m.get("type")) {
+                            case "join_group": {
+                                String groupId = (String) m.get("groupId");
+                                String userId = (String) m.get("fromId");
+                                if (vertx.isClustered()) {
+                                    sharedData.getClusterWideMap(groupId, res -> {
+                                        if (res.succeeded()) {
+                                            res.result().putIfAbsent(userId, clientSocket.writeHandlerID(), r -> logger.info(String.format("[%s] join [%s] %s", userId, groupId, r.succeeded())));
+                                        }
+                                    });
+                                } else {
+                                    sharedData.getLocalMap(groupId).putIfAbsent(userId, clientSocket.writeHandlerID());
+                                    logger.info(String.format("[%s] join [%s]", userId, groupId));
+                                }
+                                break;
+                            }
+                            case "leave_group": {
+                                String groupId = (String) m.get("groupId");
+                                String userId = (String) m.get("fromId");
+                                if (vertx.isClustered()) {
+                                    sharedData.getClusterWideMap(groupId, res -> {
+                                        if (res.succeeded()) {
+                                            res.result().removeIfPresent(userId, clientSocket.writeHandlerID(), r -> logger.info(String.format("[%s] leave [%s] %s", userId, groupId, r.succeeded())));
+                                        }
+                                    });
+                                } else {
+                                    sharedData.getLocalMap(groupId).remove(userId, clientSocket.writeHandlerID());
+                                    logger.info(String.format("[%s] leave [%s]", userId, groupId));
+                                }
+                                break;
+                            }
+                            case "talk": {
+                                //TODO single talk
+                                break;
+                            }
+                            case "group_talk": {
+                                break;
+                            }
+                        }
                         break;
                 }
-            }).handle(buf));
+            })::handle);
 
             //client out
             clientSocket.closeHandler(Void -> {
