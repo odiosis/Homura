@@ -8,8 +8,12 @@ import java.util.Optional;
 @Getter
 public enum Command {
 
-    client_heartbeat(2),
-    client_heartbeat_resp(3);
+    heartbeat(2),
+    heartbeat_resp(3),
+    upstream(4),
+    downstream(5),
+    auth(6),
+    auth_resp(7);
 
     private int code;
     Command(int code) {

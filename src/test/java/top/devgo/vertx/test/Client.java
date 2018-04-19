@@ -8,6 +8,8 @@ import top.devgo.vertx.message.Command;
 import top.devgo.vertx.message.Message;
 import top.devgo.vertx.message.MessageHelper;
 
+import java.util.HashMap;
+
 public class Client {
 
     public static void main(String[] args) {
@@ -21,14 +23,19 @@ public class Client {
                             netSocket.handler(buf -> RecordParser.newFixed(buf.getInt(0)).handler(buffer -> {
                                 Message message = MessageHelper.decompose(buffer);
                                 switch (message.getCommand()) {
-                                    case client_heartbeat_resp:
+                                    case heartbeat_resp:
                                         System.out.println("heartbeat response received");
                                         break;
                                     default:
                                         break;
                                 }
                             }).handle(buf));
-                            vertx.setPeriodic(5*1000, timerId -> netSocket.write(MessageHelper.compose(Command.client_heartbeat, null)));
+                            vertx.setPeriodic(5*1000, timerId -> netSocket.write(MessageHelper.compose(Command.heartbeat, null)));
+
+                            netSocket.write(MessageHelper.compose(
+                                    Command.upstream,
+                                    new HashMap<String, Object>(){{put("type", "join_group");}}
+                                    ));
                         } else {
                             System.out.println("Failed to connect: " + result.cause().getMessage());
                         }
