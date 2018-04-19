@@ -31,7 +31,7 @@ public class MessageHelper {
     public static Message decompose(Buffer buffer){
         int packageLength = buffer.getInt(0);
         int command = buffer.getInt(4+2+2);
-        if (command > Command.client_heartbeat_resp.getCode()){
+        if (command > Command.heartbeat_resp.getCode()){
             Object body = Json.decodeValue(buffer.getBuffer(headerLength, packageLength), Object.class);
             return new Message(Command.of(command), body);
         }else {
