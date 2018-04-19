@@ -6,6 +6,6 @@ import io.vertx.core.Vertx;
 public class Bootstrap {
 
     public static void main(String[] args) {
-        Vertx.vertx().deployVerticle("top.devgo.vertx.server.Server", new DeploymentOptions().setInstances(2));//multi event-loop
+        Vertx.vertx().deployVerticle(Server.class, new DeploymentOptions().setInstances(2));//multi event-loop
     }
 }
