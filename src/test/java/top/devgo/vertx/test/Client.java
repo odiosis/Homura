@@ -15,7 +15,7 @@ public class Client {
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
-        int clients = 2;
+        int clients = 50;
         CountDownLatch cdl = new CountDownLatch(clients);
         for (int i = 0; i < clients; i++) {
             vertx.createNetClient(new NetClientOptions().setConnectTimeout(1000).setReconnectAttempts(3).setReconnectInterval(2000))
@@ -24,17 +24,20 @@ public class Client {
                             long clientIndex = clients - cdl.getCount();
                             cdl.countDown();
                             NetSocket netSocket = result.result();
-                            netSocket.handler(buf -> RecordParser.newFixed(buf.getInt(0)).handler(buffer -> {
+                            netSocket.exceptionHandler(Throwable::printStackTrace);
+
+                            RecordParser recordParser = RecordParser.newDelimited(MessageHelper.delimiter, netSocket);
+                            netSocket.handler(recordParser.handler(buffer -> {
                                 Message message = MessageHelper.decompose(buffer);
                                 switch (message.getCommand()) {
                                     case heartbeat_resp:
                                         System.out.println("heartbeat response received");
                                         break;
                                     default:
-                                        System.out.println(message);
+//                                        System.out.println(message);
                                         break;
                                 }
-                            }).handle(buf));
+                            })::handle);
 
                             //heartbeat
 //                            vertx.setPeriodic(5*1000, timerId -> netSocket.write(MessageHelper.compose(Command.heartbeat, null)));
@@ -51,30 +54,32 @@ public class Client {
                                     }}));
 
                             //group talk
-                            netSocket.write(MessageHelper.compose(
-                                    Command.upstream,
-                                    new HashMap<String, Object>() {{
-                                        put("id", "");
-                                        put("type", "group_talk");
-                                        put("groupId", "test-group-1");
-                                        put("fromId", "client-"+clientIndex);
-                                        put("msg", "hello world!");
-                                        put("ts", "");
-                                    }}));
-
-                            //leave group with 3s delay
-                            vertx.setTimer(3 * 1000, timerId -> {
+                            vertx.setPeriodic(1000, timeId ->
                                 netSocket.write(MessageHelper.compose(
                                         Command.upstream,
                                         new HashMap<String, Object>() {{
                                             put("id", "");
-                                            put("type", "leave_group");
+                                            put("type", "group_talk");
                                             put("groupId", "test-group-1");
-                                            put("fromId", "client-" + clientIndex);
+                                            put("fromId", "client-"+clientIndex);
+                                            put("msg", "hello world!");
                                             put("ts", "");
-                                        }}));
-                                vertx.close();
-                            });
+                                        }}))
+                            );
+
+                            //leave group with 3s delay
+//                            vertx.setTimer(3 * 1000, timerId -> {
+//                                netSocket.write(MessageHelper.compose(
+//                                        Command.upstream,
+//                                        new HashMap<String, Object>() {{
+//                                            put("id", "");
+//                                            put("type", "leave_group");
+//                                            put("groupId", "test-group-1");
+//                                            put("fromId", "client-" + clientIndex);
+//                                            put("ts", "");
+//                                        }}));
+//                                vertx.close();
+//                            });
 
                         } else {
                             System.out.println("Failed to connect: " + result.cause().getMessage());

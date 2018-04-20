@@ -43,7 +43,7 @@ public class Server extends AbstractVerticle {
                     )
                     .forEach(entry -> {
                         eventBus.send(entry.getKey(), MessageHelper.compose(Command.downstream, m));
-                        logger.info(String.format("[%s] to [%s]: %s", userId, socketUserMap.get(entry.getKey()), m.get("msg")));
+//                        logger.info(String.format("[%s] to [%s]: %s", userId, socketUserMap.get(entry.getKey()), m.get("msg")));
                     });
         });
 
@@ -110,6 +110,6 @@ public class Server extends AbstractVerticle {
         });
         server.listen(port);
 
-        logger.info(String.format("server started at %s", port));
+        logger.info(String.format("server[%s] started at %s", Thread.currentThread().getName(), port));
     }
 }

@@ -6,6 +6,8 @@ import io.vertx.core.Vertx;
 public class Bootstrap {
 
     public static void main(String[] args) {
-        Vertx.vertx().deployVerticle(Server.class, new DeploymentOptions().setInstances(2));//multi event-loop
+        Vertx vertx = Vertx.vertx();
+        int cores = Runtime.getRuntime().availableProcessors();
+        vertx.deployVerticle(Server.class, new DeploymentOptions().setInstances(2 * cores));//set instances=event-loops
     }
 }
