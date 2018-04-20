@@ -15,7 +15,7 @@ public class Client {
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
-        int clients = 50;
+        int clients = 500;
         CountDownLatch cdl = new CountDownLatch(clients);
         for (int i = 0; i < clients; i++) {
             vertx.createNetClient(new NetClientOptions().setConnectTimeout(1000).setReconnectAttempts(3).setReconnectInterval(2000))
@@ -54,7 +54,7 @@ public class Client {
                                     }}));
 
                             //group talk
-                            vertx.setPeriodic(1000, timeId ->
+                            vertx.setPeriodic(5 * 1000, timeId ->
                                 netSocket.write(MessageHelper.compose(
                                         Command.upstream,
                                         new HashMap<String, Object>() {{

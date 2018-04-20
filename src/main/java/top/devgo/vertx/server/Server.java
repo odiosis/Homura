@@ -6,6 +6,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.net.NetServer;
+import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.parsetools.RecordParser;
 import io.vertx.core.shareddata.LocalMap;
 import io.vertx.core.shareddata.SharedData;
@@ -47,7 +48,7 @@ public class Server extends AbstractVerticle {
                     });
         });
 
-        NetServer server =  vertx.createNetServer();
+        NetServer server =  vertx.createNetServer(new NetServerOptions().setReusePort(true));
         server.connectHandler(clientSocket -> {
             //new client in
             sharedData.getCounter(SD_ONLINE_NUMBERS, result -> {
