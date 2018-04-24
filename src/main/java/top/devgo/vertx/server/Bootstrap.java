@@ -10,6 +10,8 @@ public class Bootstrap {
         Vertx vertx = Vertx.vertx(new VertxOptions().setPreferNativeTransport(true));
         int cores = Runtime.getRuntime().availableProcessors();
         System.out.println("native transport enabled: " + vertx.isNativeTransportEnabled());
-        vertx.deployVerticle(Server.class, new DeploymentOptions().setInstances(2 * cores));//set instances=event-loops
+        vertx.deployVerticle(Server.class, new DeploymentOptions().setInstances(cores));
+        vertx.deployVerticle(EventProcessor.class.getCanonicalName());
+//        vertx.deployVerticle(EventProcessorRx.class.getCanonicalName());
     }
 }

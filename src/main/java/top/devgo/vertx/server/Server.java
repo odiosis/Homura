@@ -16,7 +16,6 @@ import top.devgo.vertx.message.Message;
 import top.devgo.vertx.message.MessageHelper;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class Server extends AbstractVerticle {
     private Logger logger = LoggerFactory.getLogger(Server.class);
@@ -30,25 +29,10 @@ public class Server extends AbstractVerticle {
         EventBus eventBus = vertx.eventBus();
         SharedData sharedData = vertx.sharedData();
         LocalMap<String, String> socketGroupMap = sharedData.getLocalMap("socket_group_map");// socketId - groupId [scope: this vertx app]
-        Map<String, String> socketUserMap = new ConcurrentHashMap<>();// socketId - userId [scope: handler]
+        LocalMap<String, String> socketUserMap = sharedData.getLocalMap("socket_user_map");// socketId - groupId [scope: this vertx app]
 
-        eventBus.consumer("group_talk", message -> {
-            Map<String, Object> m = Json.decodeValue((String) message.body(),Map.class) ;
-            String groupId = (String) m.get("groupId");
-            String userId = (String) m.get("fromId");
 
-            socketGroupMap.entrySet().stream()
-                    .filter(entry -> entry.getValue().equals(groupId) &&
-                            socketUserMap.keySet().contains(entry.getKey()) &&
-                            !socketUserMap.get(entry.getKey()).equals(userId)
-                    )
-                    .forEach(entry -> {
-                        eventBus.send(entry.getKey(), MessageHelper.compose(Command.downstream, m));
-//                        logger.info(String.format("[%s] to [%s]: %s", userId, socketUserMap.get(entry.getKey()), m.get("msg")));
-                    });
-        });
-
-        NetServer server =  vertx.createNetServer(new NetServerOptions().setReusePort(true));
+        NetServer server =  vertx.createNetServer(new NetServerOptions().setReusePort(true));//reuse port warning, see https://github.com/eclipse/vert.x/issues/2193
         server.connectHandler(clientSocket -> {
             //new client in
             sharedData.getCounter(SD_ONLINE_NUMBERS, result -> {
