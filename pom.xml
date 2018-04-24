@@ -11,7 +11,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <vertx.version>3.5.0</vertx.version>
+        <vertx.version>3.5.1</vertx.version>
     </properties>
 
     <dependencies>
@@ -34,6 +34,16 @@
             <groupId>io.vertx</groupId>
             <artifactId>vertx-rx-java2</artifactId>
             <version>${vertx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-dropwizard-metrics</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-graphite</artifactId>
+            <version>4.0.2</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
