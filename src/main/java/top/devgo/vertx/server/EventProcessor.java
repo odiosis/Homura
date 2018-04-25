@@ -38,5 +38,18 @@ public class EventProcessor extends AbstractVerticle {
                         logger.debug(String.format("[%s] to [%s]: %s", userId, socketUserMap.get(entry.getKey()), m.get("msg")));
                     });
         });
+
+        eventBus.consumer("talk", message -> {
+            Map<String, Object> m = Json.decodeValue((String) message.body(),Map.class) ;
+            String toId = (String) m.get("toId");
+            String userId = (String) m.get("fromId");
+
+            socketUserMap.entrySet().stream()
+                    .filter(entry -> toId.equals(entry.getValue()))
+                    .forEach(entry -> {
+                        eventBus.send(entry.getKey(), MessageHelper.compose(Command.downstream, m));
+                        logger.debug(String.format("[%s] to [%s]: %s", userId, toId, m.get("msg")));
+                    });
+        });
     }
 }

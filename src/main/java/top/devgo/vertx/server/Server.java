@@ -71,7 +71,7 @@ public class Server extends AbstractVerticle {
                                 logger.info(String.format("[%s] leave [%s]", userId, groupId));
                                 break;
                             case "talk":
-                                //TODO single talk
+                                eventBus.publish("talk", Json.encode(m));
                                 break;
                             case "group_talk":
                                 eventBus.publish("group_talk", Json.encode(m));

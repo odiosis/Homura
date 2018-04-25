@@ -4,6 +4,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.json.Json;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
 import io.vertx.core.parsetools.RecordParser;
@@ -11,12 +12,11 @@ import top.devgo.vertx.message.Command;
 import top.devgo.vertx.message.Message;
 import top.devgo.vertx.message.MessageHelper;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static top.devgo.vertx.message.Command.heartbeat_resp;
 
 
 public class Client {
@@ -25,17 +25,20 @@ public class Client {
         Vertx vertx = Vertx.vertx();
         EventBus eventBus = vertx.eventBus();
 
-        int clients = 2000;
-        int talksPerClient = 100;
+//        String host = "172.16.6.125";
+        String host = "127.0.0.1";
+
+        int clients = 50;
+        int talksPerClient = 60;
         long talkInterval = 100;
 
 
         Future[] connects = new Future[clients];
-        NetClientOptions netClientOptions = new NetClientOptions().setConnectTimeout(1000).setReconnectAttempts(3).setReconnectInterval(2000);
+        NetClientOptions netClientOptions = new NetClientOptions().setConnectTimeout(2000).setReconnectAttempts(3).setReconnectInterval(2000);
         long start = System.currentTimeMillis();
         for (int i = 0; i < clients; i++) {
             Future<NetSocket> connect = Future.future();
-            vertx.createNetClient(netClientOptions).connect(7777, "127.0.0.1", connect.completer());
+            vertx.createNetClient(netClientOptions).connect(7777, host, connect.completer());
             connects[i] = connect;
         }
 
@@ -71,14 +74,35 @@ public class Client {
                                     case heartbeat_resp:
                                         System.out.println("heartbeat response received");
                                         break;
+                                    case downstream:
+                                        Map<String, Object> m = (Map<String, Object>) message.getBody();
+                                        switch ((String) m.get("type")) {
+                                            case "talk":
+//                                                System.out.println("[talk]"+ m);
+                                                break;
+                                            case "group_talk":
+//                                                System.out.println("[group_talk]"+ m);
+                                                break;
+                                        }
+                                        break;
                                     default:
-//                                        System.out.println(message);
                                         break;
                                 }
                             })::handle);
 
                     //heartbeat
 //                    vertx.setPeriodic(5*1000, timerId -> netSocket.write(MessageHelper.compose(Command.heartbeat, null)));
+
+                    //talk
+//                    netSocket.write(MessageHelper.compose(
+//                            Command.upstream,
+//                            new HashMap<String, Object>() {{
+//                                put("id", "");
+//                                put("type", "talk");
+//                                put("toId", "client-1");
+//                                put("fromId", "client-" + clientIndex);
+//                                put("ts", "");
+//                            }}));
 
                     //join group
                     netSocket.write(MessageHelper.compose(
@@ -122,7 +146,7 @@ public class Client {
                 }
 
             }else {
-                System.out.println(all.cause().getMessage());
+                System.out.println("connection establish failed: " + all.cause().getMessage());
             }
         });
 

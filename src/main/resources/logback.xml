@@ -22,7 +22,7 @@
     </appender>
 
     <!-- 将上面两个 appender 关联到我们的项目 -->
-    <logger name="top.devgo" level="DEBUG" additivity="false"> <!-- name 是项目包名，为了方便调试，输出 DEBUG 级别及其以上的log -->
+    <logger name="top.devgo" level="INFO" additivity="false"> <!-- name 是项目包名，为了方便调试，输出 DEBUG 级别及其以上的log -->
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="dailyRollingFileAppender" />
     </logger>
