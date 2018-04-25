@@ -16,8 +16,6 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static top.devgo.vertx.message.Command.heartbeat_resp;
-
 
 public class Client {
 
