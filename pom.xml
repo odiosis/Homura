@@ -12,6 +12,7 @@
     <properties>
         <java.version>1.8</java.version>
         <vertx.version>3.5.1</vertx.version>
+        <netty.version>4.1.19.Final</netty.version>
     </properties>
 
     <dependencies>
@@ -46,15 +47,20 @@
             <version>4.0.2</version>
         </dependency>
         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <version>1.6.1</version>
+        </dependency>
+        <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
-            <version>4.1.15.Final</version>
+            <version>${netty.version}</version>
             <classifier>osx-${os.detected.arch}</classifier>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-epoll</artifactId>
-            <version>4.1.15.Final</version>
+            <version>${netty.version}</version>
             <classifier>linux-${os.detected.arch}</classifier>
         </dependency>
         <dependency>
