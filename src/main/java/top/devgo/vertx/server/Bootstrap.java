@@ -6,6 +6,7 @@ import com.codahale.metrics.graphite.GraphiteReporter;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.logging.SLF4JLogDelegateFactory;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.ext.dropwizard.Match;
 
@@ -14,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 public class Bootstrap {
 
     public static void main(String[] args) {
+        System.setProperty("vertx.logger-delegate-factory-class-name", SLF4JLogDelegateFactory.class.getCanonicalName());
+
         Vertx vertx = Vertx.vertx(
                 new VertxOptions()
                         .setPreferNativeTransport(true)

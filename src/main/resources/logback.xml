@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 控制台 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <Pattern>[%-5level] %d{HH:mm:ss} %logger{20} %line: %msg %n</Pattern>   <!-- 输出格式 -->
+            <charset>UTF-8</charset> <!-- 解决中文乱码问题 -->
+        </encoder>
+    </appender>
+
+    <!-- 记录到文件 (每天一个文件) -->
+    <appender name="dailyRollingFileAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>logs/Homura.log</File>   <!-- 最新的log文件名 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>logs/Homura.%d{yyyy-MM-dd}.log</FileNamePattern>  <!-- 历史文件名 -->
+            <maxHistory>30</maxHistory> <!-- 保留 30 天的日志 -->
+        </rollingPolicy>
+        <encoder>
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} : %n %msg %n</Pattern>
+            <charset>UTF-8</charset>  <!--解决中文乱码问题-->
+        </encoder>
+    </appender>
+
+    <!-- 将上面两个 appender 关联到我们的项目 -->
+    <logger name="top.devgo" level="DEBUG" additivity="false"> <!-- name 是项目包名，为了方便调试，输出 DEBUG 级别及其以上的log -->
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="dailyRollingFileAppender" />
+    </logger>
+
+    <!-- 其他框架的日志输出 -->
+    <logger name="io.vertx" level="INFO"/>
+    <logger name="io.netty" level="INFO"/>
+</configuration>
