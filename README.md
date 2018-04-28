@@ -5,19 +5,23 @@
 作为一个vertx的poc项目，验证vertx的性能。
 
 ## 使用
-- server端：启动Bootstrap
-- client端：启动test下的Client
+1. build project `mvn package`  
 
+2. config 
+    - maxfiles/openfiles
+    - net.inet.ip.portrange
 
-## Doc
-### server结构
+3. run
+```bash
+//run server
+//服务端监听7777端口 如果没有graphite可以注掉响应代码
+java -jar Homura*.jar
 
-![arc](vertx.png)
-
-1. group_talk消息在vertx cluster间通过eventbus传递，cluster间共享  
-2. group信息保存在每个vertx节点上，在handler间共享  
-3. client的连接信息保存在各自handler上  
-
+//run client
+//客户端默认连接7777端口 发送消息的间隔默认1s
+//args: ${ips}-如有多个ip用,分割 ${clients}-每个ip建立多少个client ${talksPerClient}-每个client发几条消息
+java -cp Homura*.jar top.devgo.vertx.benchmark.LoadTest ${ips} ${clients} ${talksPerClient}
+```
 
 ### 消息协议
 见wiki

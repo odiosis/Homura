@@ -32,7 +32,7 @@ public class Server extends AbstractVerticle {
         LocalMap<String, String> socketUserMap = sharedData.getLocalMap("socket_user_map");// socketId - groupId [scope: this vertx app]
 
 
-        NetServer server =  vertx.createNetServer(new NetServerOptions().setReusePort(true));//reuse port warning, see https://github.com/eclipse/vert.x/issues/2193
+        NetServer server = vertx.createNetServer(new NetServerOptions().setReusePort(true));//reuse port warning, see https://github.com/eclipse/vert.x/issues/2193
         server.connectHandler(clientSocket -> {
             //new client in
             sharedData.getCounter(SD_ONLINE_NUMBERS, result -> {
