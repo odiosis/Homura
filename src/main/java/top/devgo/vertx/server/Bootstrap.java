@@ -3,6 +3,8 @@ package top.devgo.vertx.server;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteReporter;
+import com.hazelcast.config.Config;
+import com.hazelcast.core.Hazelcast;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -17,6 +19,12 @@ public class Bootstrap {
     public static void main(String[] args) {
         System.setProperty("vertx.logger-delegate-factory-class-name", SLF4JLogDelegateFactory.class.getCanonicalName());
 
+        Config config = new Config();
+        config.setInstanceName("Homura");
+        config.getGroupConfig().setName("homura-hazel-cluster");
+        Hazelcast.newHazelcastInstance(config);
+
+
         Vertx vertx = Vertx.vertx(
                 new VertxOptions()
                         .setPreferNativeTransport(true)
@@ -27,7 +35,8 @@ public class Bootstrap {
         System.out.println("native transport enabled: " + vertx.isNativeTransportEnabled());
         vertx.deployVerticle(Server.class, new DeploymentOptions().setInstances(cores));
         vertx.deployVerticle(EventProcessor.class.getCanonicalName());
-//        vertx.deployVerticle(EventProcessorRx.class.getCanonicalName());
+        vertx.deployVerticle(EventProcessorRx.class.getCanonicalName());
+
 
         GraphiteReporter.forRegistry(SharedMetricRegistries.getOrCreate("chaser"))
                 .prefixedWith("Homura")

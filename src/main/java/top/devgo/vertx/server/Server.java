@@ -1,6 +1,10 @@
 package top.devgo.vertx.server;
 
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.MultiMap;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.NetServer;
@@ -15,6 +19,7 @@ import top.devgo.vertx.message.Command;
 import top.devgo.vertx.message.Message;
 import top.devgo.vertx.message.MessageHelper;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class Server extends AbstractVerticle {
@@ -26,10 +31,15 @@ public class Server extends AbstractVerticle {
 
     @Override
     public void start() {
+        HazelcastInstance hazelcast = Hazelcast.getHazelcastInstanceByName("Homura");
+
+        MultiMap<String, String> group = hazelcast.getMultiMap("group");// groupId -> [userId..]
+        Map<String, Buffer> msgBufferMap = hazelcast.getMap("msg_buffer");//msgId - msgBuff
+
         EventBus eventBus = vertx.eventBus();
         SharedData sharedData = vertx.sharedData();
         LocalMap<String, String> socketGroupMap = sharedData.getLocalMap("socket_group_map");// socketId - groupId [scope: this vertx app]
-        LocalMap<String, String> socketUserMap = sharedData.getLocalMap("socket_user_map");// socketId - groupId [scope: this vertx app]
+        LocalMap<String, String> socketUserMap = sharedData.getLocalMap("socket_user_map");// socketId - userId [scope: this vertx app]
 
 
         NetServer server = vertx.createNetServer(new NetServerOptions().setReusePort(true));//reuse port warning, see https://github.com/eclipse/vert.x/issues/2193
@@ -57,25 +67,37 @@ public class Server extends AbstractVerticle {
                         break;
                     case upstream:
                         Map<String, Object> m = (Map<String, Object>) message.getBody();
-                        String groupId = (String) m.get("groupId");
-                        String userId = (String) m.get("fromId");
                         //type: join_group/leave_group/talk/group_talk
+                        int qos = (int) m.get("qos");
                         switch ((String) m.get("type")) {
-                            case "join_group":
+                            case "join_group": {
+                                String groupId = (String) m.get("groupId");
+                                String userId = (String) m.get("fromId");
                                 socketUserMap.put(clientSocket.writeHandlerID(), userId);
                                 socketGroupMap.put(clientSocket.writeHandlerID(), groupId);
+                                group.put(groupId, userId);
                                 logger.info(String.format("[%s] join [%s]", userId, groupId));
-                                break;
-                            case "leave_group":
+                            } break;
+                            case "leave_group": {
+                                String groupId = (String) m.get("groupId");
+                                String userId = (String) m.get("fromId");
                                 socketGroupMap.remove(clientSocket.writeHandlerID(), groupId);
+                                group.remove(groupId, userId);
+                                if (qos == 1) clientSocket.write(MessageHelper.compose(Command.downstream, new HashMap(){{put("type", "msg_conform"); put("msgId",  m.get("id"));}}));
                                 logger.info(String.format("[%s] leave [%s]", userId, groupId));
-                                break;
-                            case "talk":
+                            } break;
+                            case "talk": {
                                 eventBus.publish("talk", Json.encode(m));
-                                break;
-                            case "group_talk":
+                                if (qos == 1) clientSocket.write(MessageHelper.compose(Command.downstream, new HashMap(){{put("type", "msg_conform"); put("msgId",  m.get("id"));}}));
+                            } break;
+                            case "group_talk": {
                                 eventBus.publish("group_talk", Json.encode(m));
-                                break;
+                                if (qos == 1) clientSocket.write(MessageHelper.compose(Command.downstream, new HashMap(){{put("type", "msg_conform"); put("msgId",  m.get("id"));}}));
+                            } break;
+                            case "msg_conform": {
+                                String msgId = (String) m.get("msgId");
+                                msgBufferMap.remove(msgId);
+                            } break;
                         }
                         break;
                 }

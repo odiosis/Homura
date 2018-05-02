@@ -7,7 +7,6 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
 import io.vertx.core.parsetools.RecordParser;
-import lombok.AllArgsConstructor;
 import top.devgo.vertx.message.Command;
 import top.devgo.vertx.message.Message;
 import top.devgo.vertx.message.MessageHelper;
@@ -25,21 +24,31 @@ public class LoadTest {
             String[] ips = args[0].indexOf(",") > 0 ? args[0].split(",") : new String[]{args[0]};
             int clients = Integer.parseInt(args[1]);
             int talksPerClient = Integer.parseInt(args[2]);
-            Arrays.asList(ips).forEach(ip -> new Client(ip, 7777, clients, talksPerClient, 1000).run());
+            Arrays.asList(ips).forEach(ip -> new Client(ip, clients, talksPerClient, 1000).run());
         }
     }
 
 
-    @AllArgsConstructor
     static class Client {
         String host;
-        int port;
+        int port = 7777;
+        int qos = 0;
+//        int qos = 1;
 
         int clients;
         int talksPerClient;
         long talkInterval;
+        Vector<String> uncheckedMsg = new Vector<>();
 
-        public void run() {
+        public Client(String ip, int clients, int talksPerClient, int talkInterval) {
+            host = ip;
+            this.clients = clients;
+            this.talksPerClient = talksPerClient;
+            this.talkInterval = talkInterval;
+        }
+
+
+        void run() {
             Vertx vertx = Vertx.vertx();
             EventBus eventBus = vertx.eventBus();
 
@@ -58,8 +67,11 @@ public class LoadTest {
                 String socketId = (String) msg.body();
                 finishSockets.add(socketId);
                 if (finishSockets.size() == clients){
-                    vertx.close();
                     System.out.println(String.format("[%s]talk cost %d ms. (ground truth %d ms)", Thread.currentThread().getName(), System.currentTimeMillis()-talkStart.get(), talksPerClient*talkInterval));
+                    vertx.setTimer(5000, timerId -> {
+                        vertx.close();
+                        System.out.println(String.format("[%s]unchecked msg: %d / %d", Thread.currentThread().getName(), uncheckedMsg.stream().distinct().count(), clients*talksPerClient+clients*2));
+                    });
                 }
             });
 
@@ -91,6 +103,9 @@ public class LoadTest {
                                         case "group_talk":
 //                                                System.out.println("[group_talk]"+ m);
                                             break;
+                                        case "msg_conform": {
+                                            uncheckedMsg.remove(m.get("msgId"));
+                                        } break;
                                     }
                                     break;
                                 default:
@@ -116,8 +131,9 @@ public class LoadTest {
                         netSocket.write(MessageHelper.compose(
                                 Command.upstream,
                                 new HashMap<String, Object>() {{
-                                    put("id", "");
+                                    put("id", genId());
                                     put("type", "join_group");
+                                    put("qos", qos);
                                     put("groupId", "test-group-1");
                                     put("fromId", "client-" + clientIndex);
                                     put("ts", "");
@@ -129,8 +145,9 @@ public class LoadTest {
                             netSocket.write(MessageHelper.compose(
                                     Command.upstream,
                                     new HashMap<String, Object>() {{
-                                        put("id", "");
+                                        put("id", genId());
                                         put("type", "group_talk");
+                                        put("qos", qos);
                                         put("groupId", "test-group-1");
                                         put("fromId", "client-" + clientIndex);
                                         put("msg", "hello world!");
@@ -142,8 +159,9 @@ public class LoadTest {
                                 netSocket.write(MessageHelper.compose(
                                         Command.upstream,
                                         new HashMap<String, Object>() {{
-                                            put("id", "");
+                                            put("id", genId());
                                             put("type", "leave_group");
+                                            put("qos", qos);
                                             put("groupId", "test-group-1");
                                             put("fromId", "client-" + clientIndex);
                                             put("ts", "");
@@ -160,6 +178,12 @@ public class LoadTest {
                 }
             });
 
+        }
+
+        String genId() {
+            String uuid =  UUID.randomUUID().toString();
+            uncheckedMsg.add(uuid);
+            return uuid;
         }
 
     }
