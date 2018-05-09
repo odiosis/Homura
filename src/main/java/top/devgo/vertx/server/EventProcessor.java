@@ -3,7 +3,6 @@ package top.devgo.vertx.server;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
@@ -15,6 +14,7 @@ import top.devgo.vertx.message.MessageHelper;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class EventProcessor extends AbstractVerticle {
 
@@ -23,7 +23,7 @@ public class EventProcessor extends AbstractVerticle {
     @Override
     public void start() {
         HazelcastInstance hazelcast = Hazelcast.getHazelcastInstanceByName("Homura");
-        Map<String, Buffer> msgBufferMap = hazelcast.getMap("msg_buffer");//msgId - msgBuff
+        Map<String, Map> msgBufferMap = hazelcast.getMap("msg_buffer");//msgId - msg
 
         EventBus eventBus = vertx.eventBus();
         SharedData sharedData = vertx.sharedData();
@@ -37,19 +37,18 @@ public class EventProcessor extends AbstractVerticle {
             String msgId = (String) m.get("id");
             int qos = (int) m.get("qos");
 
-            String sender = socketUserMap.entrySet().stream().filter(en -> userId.equals(en.getValue())).map(Map.Entry::getKey).findFirst().get();
+            Optional<String> sender = socketUserMap.entrySet().stream().filter(en -> userId.equals(en.getValue())).map(Map.Entry::getKey).findFirst();
 
             socketGroupMap.entrySet().stream()
                     .filter(entry -> groupId.equals(entry.getValue()) &&
                             socketUserMap.keySet().contains(entry.getKey()) &&
-                            !sender.equals(entry.getKey())
+                            sender.isPresent() && !sender.get().equals(entry.getKey())
                     )
                     .forEach(entry -> {
                         String socketId = entry.getKey();
-                        Buffer msg = MessageHelper.compose(Command.downstream, m);
-                        eventBus.send(socketId, msg);
+                        eventBus.send(socketId, MessageHelper.compose(Command.downstream, m));
                         if (qos == 1) {
-                            msgBufferMap.put(msgId, msg);
+                            msgBufferMap.put(msgId, m);
                             eventBus.publish("re_sending", Json.encode(new HashMap<String, String>(){{put("userId", socketUserMap.get(socketId));put("msgId", msgId);}}));
                         }
                         logger.debug(String.format("[%s] to [%s]: %s", userId, socketUserMap.get(socketId), m.get("msg")));
@@ -67,10 +66,9 @@ public class EventProcessor extends AbstractVerticle {
                     .filter(entry -> toId.equals(entry.getValue()))
                     .forEach(entry -> {
                         String socketId = entry.getKey();
-                        Buffer msg = MessageHelper.compose(Command.downstream, m);
-                        eventBus.send(socketId, msg);
+                        eventBus.send(socketId, MessageHelper.compose(Command.downstream, m));
                         if (qos == 1) {
-                            msgBufferMap.put(msgId, msg);
+                            msgBufferMap.put(msgId, m);
                             eventBus.publish("re_sending", Json.encode(new HashMap<String, String>(){{put("userId", socketUserMap.get(socketId));put("msgId", msgId);}}));
                         }
                         logger.debug(String.format("[%s] to [%s]: %s", userId, toId, m.get("msg")));

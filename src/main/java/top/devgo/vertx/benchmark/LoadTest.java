@@ -32,13 +32,13 @@ public class LoadTest {
     static class Client {
         String host;
         int port = 7777;
-        int qos = 0;
-//        int qos = 1;
+//        int qos = 0;
+        int qos = 1;
 
         int clients;
         int talksPerClient;
         long talkInterval;
-        Vector<String> uncheckedMsg = new Vector<>();
+        List<String> uncheckedMsg = new ArrayList<>();
 
         public Client(String ip, int clients, int talksPerClient, int talkInterval) {
             host = ip;
@@ -53,7 +53,7 @@ public class LoadTest {
             EventBus eventBus = vertx.eventBus();
 
             Future[] connects = new Future[clients];
-            NetClientOptions netClientOptions = new NetClientOptions().setConnectTimeout(5*1000).setReconnectAttempts(3).setReconnectInterval(10*1000);
+            NetClientOptions netClientOptions = new NetClientOptions().setConnectTimeout(5*1000).setReconnectAttempts(3).setReconnectInterval(10*1000L);
             long start = System.currentTimeMillis();
             for (int i = 0; i < clients; i++) {
                 Future<NetSocket> connect = Future.future();
@@ -62,15 +62,15 @@ public class LoadTest {
             }
 
             AtomicReference<Long> talkStart = new AtomicReference<>();
-            List<String> finishSockets = new Vector<>(clients);
+            List<String> finishSockets = new ArrayList<>(clients);
             eventBus.consumer("fin", msg -> {
                 String socketId = (String) msg.body();
                 finishSockets.add(socketId);
                 if (finishSockets.size() == clients){
                     System.out.println(String.format("[%s]talk cost %d ms. (ground truth %d ms)", Thread.currentThread().getName(), System.currentTimeMillis()-talkStart.get(), talksPerClient*talkInterval));
-                    vertx.setTimer(5000, timerId -> {
+                    vertx.setTimer(10*1000L, timerId -> {
                         vertx.close();
-                        System.out.println(String.format("[%s]unchecked msg: %d / %d", Thread.currentThread().getName(), uncheckedMsg.stream().distinct().count(), clients*talksPerClient+clients*2));
+                        System.out.println(String.format("[%s]unchecked msg: %d / %d", Thread.currentThread().getName(), uncheckedMsg.stream().distinct().count(), clients*(talksPerClient+2)));
                     });
                 }
             });

@@ -68,6 +68,11 @@
             <artifactId>lombok</artifactId>
             <version>1.16.20</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -111,6 +116,27 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>3.4.0.905</version>
+            </plugin>
         </plugins>
+
     </build>
+
+    <profiles>
+        <profile>
+            <id>sonar</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <sonar.host.url>http://172.16.6.125:9000</sonar.host.url>
+                <sonar.login>9b47401e35b9797a652ce689018e179a16578ed2</sonar.login>
+            </properties>
+        </profile>
+    </profiles>
+
 </project>

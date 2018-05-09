@@ -4,7 +4,6 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.MultiMap;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.NetServer;
@@ -34,7 +33,7 @@ public class Server extends AbstractVerticle {
         HazelcastInstance hazelcast = Hazelcast.getHazelcastInstanceByName("Homura");
 
         MultiMap<String, String> group = hazelcast.getMultiMap("group");// groupId -> [userId..]
-        Map<String, Buffer> msgBufferMap = hazelcast.getMap("msg_buffer");//msgId - msgBuff
+        Map<String, Map> msgBufferMap = hazelcast.getMap("msg_buffer");//msgId - msg
 
         EventBus eventBus = vertx.eventBus();
         SharedData sharedData = vertx.sharedData();
@@ -76,6 +75,7 @@ public class Server extends AbstractVerticle {
                                 socketUserMap.put(clientSocket.writeHandlerID(), userId);
                                 socketGroupMap.put(clientSocket.writeHandlerID(), groupId);
                                 group.put(groupId, userId);
+                                if (qos == 1) clientSocket.write(MessageHelper.compose(Command.downstream, new HashMap(){{put("type", "msg_conform"); put("msgId",  m.get("id"));}}));
                                 logger.info(String.format("[%s] join [%s]", userId, groupId));
                             } break;
                             case "leave_group": {

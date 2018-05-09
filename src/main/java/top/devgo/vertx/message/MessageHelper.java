@@ -5,8 +5,8 @@ import io.vertx.core.json.Json;
 
 public class MessageHelper {
     public static final String delimiter = "--==HOMURA-PKG-END==--";//length 22
-    private static final short headerLength = 16;
-    private static final short version = 1;
+    public static final short headerLength = 16;
+    public static final short version = 1;
 
 
     public static Buffer compose(Command command, Object content) {
