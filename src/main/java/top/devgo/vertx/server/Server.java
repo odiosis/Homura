@@ -18,7 +18,6 @@ import top.devgo.vertx.message.Command;
 import top.devgo.vertx.message.Message;
 import top.devgo.vertx.message.MessageHelper;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class Server extends AbstractVerticle {
@@ -34,6 +33,7 @@ public class Server extends AbstractVerticle {
 
         MultiMap<String, String> group = hazelcast.getMultiMap("group");// groupId -> [userId..]
         Map<String, Map> msgBufferMap = hazelcast.getMap("msg_buffer");//msgId - msg
+        MultiMap<String, String> unconfirmedMsg = hazelcast.getMultiMap("unconfirmed_msg");//userId - msgId
 
         EventBus eventBus = vertx.eventBus();
         SharedData sharedData = vertx.sharedData();
@@ -55,7 +55,7 @@ public class Server extends AbstractVerticle {
             RecordParser recordParser = RecordParser.newDelimited(MessageHelper.delimiter, clientSocket);
 
             //decompose message and do logic
-            clientSocket.handler(recordParser.handler(fixedBuf -> {
+            clientSocket.exceptionHandler(e -> logger.error("--", e)).handler(recordParser.handler(fixedBuf -> {
                 Message message = MessageHelper.decompose(fixedBuf);
                 switch (message.getCommand()) {
                     case heartbeat:
@@ -75,7 +75,7 @@ public class Server extends AbstractVerticle {
                                 socketUserMap.put(clientSocket.writeHandlerID(), userId);
                                 socketGroupMap.put(clientSocket.writeHandlerID(), groupId);
                                 group.put(groupId, userId);
-                                if (qos == 1) clientSocket.write(MessageHelper.compose(Command.downstream, new HashMap(){{put("type", "msg_conform"); put("msgId",  m.get("id"));}}));
+                                if (qos == 1) clientSocket.write(MessageHelper.buildConfirmMsg(Command.downstream, String.valueOf(m.get("id")), qos));
                                 logger.info(String.format("[%s] join [%s]", userId, groupId));
                             } break;
                             case "leave_group": {
@@ -83,20 +83,21 @@ public class Server extends AbstractVerticle {
                                 String userId = (String) m.get("fromId");
                                 socketGroupMap.remove(clientSocket.writeHandlerID(), groupId);
                                 group.remove(groupId, userId);
-                                if (qos == 1) clientSocket.write(MessageHelper.compose(Command.downstream, new HashMap(){{put("type", "msg_conform"); put("msgId",  m.get("id"));}}));
+                                if (qos == 1) clientSocket.write(MessageHelper.buildConfirmMsg(Command.downstream, String.valueOf(m.get("id")), qos));
                                 logger.info(String.format("[%s] leave [%s]", userId, groupId));
                             } break;
                             case "talk": {
                                 eventBus.publish("talk", Json.encode(m));
-                                if (qos == 1) clientSocket.write(MessageHelper.compose(Command.downstream, new HashMap(){{put("type", "msg_conform"); put("msgId",  m.get("id"));}}));
+                                if (qos == 1) clientSocket.write(MessageHelper.buildConfirmMsg(Command.downstream, String.valueOf(m.get("id")), qos));
                             } break;
                             case "group_talk": {
                                 eventBus.publish("group_talk", Json.encode(m));
-                                if (qos == 1) clientSocket.write(MessageHelper.compose(Command.downstream, new HashMap(){{put("type", "msg_conform"); put("msgId",  m.get("id"));}}));
+                                if (qos == 1) clientSocket.write(MessageHelper.buildConfirmMsg(Command.downstream, String.valueOf(m.get("id")), qos));
                             } break;
-                            case "msg_conform": {
+                            case "msg_confirm": {
                                 String msgId = (String) m.get("msgId");
                                 msgBufferMap.remove(msgId);
+                                unconfirmedMsg.remove(socketUserMap.get(clientSocket.writeHandlerID()), msgId);
                             } break;
                         }
                         break;
@@ -113,6 +114,8 @@ public class Server extends AbstractVerticle {
                 });
                 socketUserMap.remove(clientSocket.writeHandlerID());
                 socketGroupMap.remove(clientSocket.writeHandlerID());
+                // client`s unconfirmedMsg saving offline
+                // reload when next time client online
             });
         });
         server.listen(port);

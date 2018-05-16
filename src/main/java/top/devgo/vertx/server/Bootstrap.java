@@ -37,7 +37,7 @@ public class Bootstrap {
 
                 vertx.deployVerticle(Server.class, new DeploymentOptions().setInstances(cores));
                 vertx.deployVerticle(EventProcessor.class.getCanonicalName());
-                vertx.deployVerticle(EventProcessorRx.class.getCanonicalName());
+                vertx.deployVerticle(ReSendProcessor.class.getCanonicalName());
 
 
                 GraphiteReporter.forRegistry(SharedMetricRegistries.getOrCreate("chaser"))

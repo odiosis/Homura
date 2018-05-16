@@ -2,6 +2,7 @@ package top.devgo.vertx.server;
 
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.MultiMap;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.Json;
@@ -12,7 +13,6 @@ import io.vertx.core.shareddata.SharedData;
 import top.devgo.vertx.message.Command;
 import top.devgo.vertx.message.MessageHelper;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -24,6 +24,7 @@ public class EventProcessor extends AbstractVerticle {
     public void start() {
         HazelcastInstance hazelcast = Hazelcast.getHazelcastInstanceByName("Homura");
         Map<String, Map> msgBufferMap = hazelcast.getMap("msg_buffer");//msgId - msg
+        MultiMap<String, String> unconfirmedMsg = hazelcast.getMultiMap("unconfirmed_msg");//userId - msgId
 
         EventBus eventBus = vertx.eventBus();
         SharedData sharedData = vertx.sharedData();
@@ -49,7 +50,7 @@ public class EventProcessor extends AbstractVerticle {
                         eventBus.send(socketId, MessageHelper.compose(Command.downstream, m));
                         if (qos == 1) {
                             msgBufferMap.put(msgId, m);
-                            eventBus.publish("re_sending", Json.encode(new HashMap<String, String>(){{put("userId", socketUserMap.get(socketId));put("msgId", msgId);}}));
+                            unconfirmedMsg.put(socketUserMap.get(socketId), msgId);
                         }
                         logger.debug(String.format("[%s] to [%s]: %s", userId, socketUserMap.get(socketId), m.get("msg")));
                     });
@@ -69,7 +70,7 @@ public class EventProcessor extends AbstractVerticle {
                         eventBus.send(socketId, MessageHelper.compose(Command.downstream, m));
                         if (qos == 1) {
                             msgBufferMap.put(msgId, m);
-                            eventBus.publish("re_sending", Json.encode(new HashMap<String, String>(){{put("userId", socketUserMap.get(socketId));put("msgId", msgId);}}));
+                            unconfirmedMsg.put(socketUserMap.get(socketId), msgId);
                         }
                         logger.debug(String.format("[%s] to [%s]: %s", userId, toId, m.get("msg")));
                     });

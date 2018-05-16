@@ -67,7 +67,7 @@ public class LoadTest {
                 String socketId = (String) msg.body();
                 finishSockets.add(socketId);
                 if (finishSockets.size() == clients){
-                    System.out.println(String.format("[%s]talk cost %d ms. (ground truth %d ms)", Thread.currentThread().getName(), System.currentTimeMillis()-talkStart.get(), talksPerClient*talkInterval));
+                    System.out.println(String.format("[%s]talk send in %d ms. (ground truth %d ms)", Thread.currentThread().getName(), System.currentTimeMillis()-talkStart.get(), talksPerClient*talkInterval));
                     vertx.setTimer(10*1000L, timerId -> {
                         vertx.close();
                         System.out.println(String.format("[%s]unchecked msg: %d / %d", Thread.currentThread().getName(), uncheckedMsg.stream().distinct().count(), clients*(talksPerClient+2)));
@@ -88,8 +88,8 @@ public class LoadTest {
                         CountDownLatch cdl = new CountDownLatch(talksPerClient);
 
                         RecordParser recordParser = RecordParser.newDelimited(MessageHelper.delimiter, netSocket);
-                        netSocket.exceptionHandler(Throwable::printStackTrace).handler(recordParser.handler(buffer -> {
-                            Message message = MessageHelper.decompose(buffer);
+                        netSocket.exceptionHandler(Throwable::printStackTrace).handler(recordParser.handler(fixedBuf -> {
+                            Message message = MessageHelper.decompose(fixedBuf);
                             switch (message.getCommand()) {
                                 case heartbeat_resp:
                                     System.out.println("heartbeat response received");
@@ -97,13 +97,15 @@ public class LoadTest {
                                 case downstream:
                                     Map<String, Object> m = (Map<String, Object>) message.getBody();
                                     switch ((String) m.get("type")) {
-                                        case "talk":
-//                                                System.out.println("[talk]"+ m);
-                                            break;
-                                        case "group_talk":
-//                                                System.out.println("[group_talk]"+ m);
-                                            break;
-                                        case "msg_conform": {
+                                        case "talk": {
+                                            netSocket.write(MessageHelper.buildConfirmMsg(Command.upstream, String.valueOf(m.get("id")), qos));
+                                            System.out.println("[talk]" + m);
+                                        } break;
+                                        case "group_talk": {
+                                            netSocket.write(MessageHelper.buildConfirmMsg(Command.upstream, String.valueOf(m.get("id")), qos));
+//                                            System.out.println("[group_talk]" + m);
+                                        } break;
+                                        case "msg_confirm": {
                                             uncheckedMsg.remove(m.get("msgId"));
                                         } break;
                                     }

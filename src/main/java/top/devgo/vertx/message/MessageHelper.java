@@ -3,6 +3,9 @@ package top.devgo.vertx.message;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MessageHelper {
     public static final String delimiter = "--==HOMURA-PKG-END==--";//length 22
     public static final short headerLength = 16;
@@ -41,5 +44,14 @@ public class MessageHelper {
         }else {
             return new Message(Command.of(command), null);
         }
+    }
+
+
+    public static Buffer buildConfirmMsg(Command cmd, String msgId, int qos) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("type", "msg_confirm");
+        body.put("msgId",  msgId);
+        body.put("qos",  qos);
+        return compose(cmd, body);
     }
 }

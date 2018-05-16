@@ -20,4 +20,15 @@ public class MessageHelperTest {
         Assert.assertEquals("msg cmd", Command.heartbeat, message.getCommand());
         System.out.println(message);
     }
+
+    @Test
+    public void testConfirmMsg() {
+
+        Buffer buffer = MessageHelper.buildConfirmMsg(Command.downstream, "123", 1);
+        System.out.println("buffer length: " + buffer.length());
+
+        Message message = MessageHelper.decompose(buffer);
+        Assert.assertEquals("msg cmd", Command.downstream, message.getCommand());
+        System.out.println(message);
+    }
 }
